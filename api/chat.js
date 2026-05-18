@@ -2,14 +2,36 @@ const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Multer — almacenamiento temporal en memoria
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB por archivo
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'image/jpeg', 'image/png', 'image/webp'
+    ];
+    cb(null, allowed.includes(file.mimetype));
+  }
+});
+
 const SYSTEM_PROMPT = `Eres el Asesor IA Libera 360, un asistente especializado en ayudar a dueños de empresas a organizar, estructurar y escalar sus negocios aplicando la metodología Libera 360.
 
 ## TU MISIÓN
-Guiar al usuario a través del Diagnóstico 360 en 6 dimensiones y generar documentos concretos.
+Guiar al usuario a través del Diagnóstico 360 en 6 dimensiones y generar documentos concretos listos para usar.
 
 ## METODOLOGÍA LIBERA 360 — 6 FASES
 - L — LOCALIZAR: Diagnóstico 360 en 6 dimensiones. Entregable: puntaje con alertas.
@@ -52,6 +74,19 @@ Preguntas: ¿Definido a dónde llegar en 3 años? ¿Socios alineados? ¿Inversio
 - Alertas principales: Punto único de falla en planta, cuello de botella en gerente comercial, CxC accionistas
 - Aprendizaje clave: En empresas de servicios con operación de campo, el cuello de botella suele ser un gerente medio, no el dueño.
 
+## DOCUMENTOS QUE PUEDES GENERAR
+Cuando el usuario llegue a la etapa de documentos, créalos COMPLETOS — no resúmenes ni esquemas.
+Comienza el título del documento con su código para que el sistema lo detecte:
+- MAT-AF-01: Matriz de Autorización de Gastos
+- SOP-OP-01: SOP de Operación (adaptar al sector del usuario)
+- SOP-AF-01: SOP de Facturación y Cobro
+- SOP-COM-01: SOP de Proceso Comercial
+- ORG-01: Organigrama Funcional
+- KPI-01: Dashboard de KPIs
+
+## ARCHIVOS ADJUNTOS
+Cuando el usuario suba documentos (P&L, estados financieros, contratos, organigramas), analízalos en el contexto de la metodología Libera 360. Identifica patrones relevantes para el diagnóstico o las fases de implementación.
+
 ## COMPORTAMIENTO
 - Haz UNA sola pregunta a la vez y espera la respuesta
 - Sé directo, honesto y empático. No maquilles la realidad
@@ -60,7 +95,10 @@ Preguntas: ¿Definido a dónde llegar en 3 años? ¿Socios alineados? ¿Inversio
 - Propón hoja de ruta de implementación en 6 etapas
 - Genera documentos completos listos para usar
 
-## AL INICIAR
+## CONTINUIDAD DE SESIÓN
+Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el diagnóstico desde donde se quedó. No vuelvas a empezar desde cero si ya hay contexto previo en la conversación.
+
+## AL INICIAR (sesión nueva sin historial)
 1. Preséntate brevemente
 2. Pregunta: nombre del usuario, nombre de empresa y a qué se dedica
 3. Inicia el diagnóstico dimensión por dimensión
@@ -68,6 +106,7 @@ Preguntas: ¿Definido a dónde llegar en 3 años? ¿Socios alineados? ¿Inversio
 5. Propón la hoja de ruta
 6. Genera documentos por orden de urgencia`;
 
+// Ruta principal — JSON con historial de mensajes
 router.post('/', async (req, res) => {
   try {
     const { messages, userId, sessionId } = req.body;
@@ -79,7 +118,6 @@ router.post('/', async (req, res) => {
         .select('summary, sector, score, alerts')
         .order('created_at', { ascending: false })
         .limit(3);
-      
       if (cases && cases.length > 0) {
         casesContext = '\n\n## CASOS REALES PROCESADOS ANTERIORMENTE:\n';
         cases.forEach(c => {
@@ -97,23 +135,118 @@ router.post('/', async (req, res) => {
 
     const assistantMessage = response.content[0].text;
 
+    // Guardar en Supabase
     if (sessionId) {
-  try {
-    await supabase.from('conversations').insert({
-      session_id: sessionId,
-      user_id: userId,
-      role: 'assistant',
-      content: assistantMessage,
-      created_at: new Date().toISOString()
-    });
-  } catch(e) {}
-}
+      try {
+        await supabase.from('conversations').insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: 'assistant',
+          content: assistantMessage,
+          created_at: new Date().toISOString()
+        });
+      } catch(e) {}
+    }
 
     res.json({ message: assistantMessage });
 
   } catch (error) {
     console.error('Error en chat:', error);
     res.status(500).json({ error: 'Error al procesar tu mensaje.' });
+  }
+});
+
+// Ruta con archivos adjuntos
+router.post('/upload', upload.array('files', 5), async (req, res) => {
+  try {
+    const { messages, userId, sessionId } = req.body;
+    const parsedMessages = JSON.parse(messages);
+    const files = req.files || [];
+
+    // Construir contenido multimodal con los archivos
+    const contentBlocks = [];
+
+    // Agregar archivos como contenido
+    for (const file of files) {
+      if (file.mimetype === 'application/pdf') {
+        contentBlocks.push({
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: file.buffer.toString('base64')
+          }
+        });
+      } else if (file.mimetype.startsWith('image/')) {
+        contentBlocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: file.mimetype,
+            data: file.buffer.toString('base64')
+          }
+        });
+      }
+      // Para Office (.docx, .xlsx, etc.) — tratamos como texto del nombre por ahora
+      else {
+        contentBlocks.push({
+          type: 'text',
+          text: `[Archivo adjunto: ${file.originalname} — ${(file.size/1024).toFixed(1)}KB. Por favor toma en cuenta este archivo en tu análisis.]`
+        });
+      }
+    }
+
+    // Texto del último mensaje del usuario
+    const lastUserMsg = parsedMessages[parsedMessages.length - 1];
+    if (lastUserMsg && lastUserMsg.content) {
+      contentBlocks.push({ type: 'text', text: lastUserMsg.content });
+    }
+
+    // Reemplazar último mensaje con contenido multimodal
+    const enrichedMessages = [...parsedMessages.slice(0, -1), {
+      role: 'user',
+      content: contentBlocks
+    }];
+
+    let casesContext = '';
+    try {
+      const { data: cases } = await supabase
+        .from('cases').select('summary, sector, score, alerts')
+        .order('created_at', { ascending: false }).limit(3);
+      if (cases && cases.length > 0) {
+        casesContext = '\n\n## CASOS REALES PROCESADOS ANTERIORMENTE:\n';
+        cases.forEach(c => {
+          casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Alertas: ${c.alerts}\n`;
+        });
+      }
+    } catch (e) {}
+
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT + casesContext,
+      messages: enrichedMessages
+    });
+
+    const assistantMessage = response.content[0].text;
+
+    if (sessionId) {
+      try {
+        await supabase.from('conversations').insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: 'assistant',
+          content: assistantMessage,
+          created_at: new Date().toISOString()
+        });
+      } catch(e) {}
+    }
+
+    res.json({ message: assistantMessage });
+
+  } catch (error) {
+    console.error('Error en chat/upload:', error);
+    res.status(500).json({ error: 'Error al procesar los archivos.' });
   }
 });
 
