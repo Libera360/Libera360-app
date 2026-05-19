@@ -102,6 +102,7 @@ Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el dia
 
 // Ruta principal — JSON con historial de mensajes
 router.post('/', async (req, res) => {
+  const { messages, userId, sessionId, loadHistory } = req.body;
 
   // Si el usuario acaba de iniciar sesión, cargar historial anterior
   if (loadHistory && userId) {
@@ -122,8 +123,6 @@ router.post('/', async (req, res) => {
     return res.json({ history: [] });
   }
   try {
-    const { messages, userId, sessionId, loadHistory } = req.body;
-
     let casesContext = '';
     try {
       const { data: cases } = await supabase
