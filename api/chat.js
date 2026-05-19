@@ -172,7 +172,7 @@ router.post('/', async (req, res) => {
 // Ruta con archivos adjuntos
 router.post('/upload', upload.array('files', 5), async (req, res) => {
   try {
-    const { messages, userId, sessionId } = req.body;
+    const { messages, userId, sessionId, loadHistory } = req.body;
     const parsedMessages = JSON.parse(messages);
     const files = req.files || [];
 
