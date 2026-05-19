@@ -68,12 +68,6 @@ Preguntas: ¿Definido a dónde llegar en 3 años? ¿Socios alineados? ¿Inversio
 - 21-25: ESTRUCTURADO — Procesos documentados, roles claros, listo para escalar.
 - 26-30: LIBERADO — Empresa funciona sin el dueño en el día a día.
 
-## CASO PILOTO DE REFERENCIA: ECO WASTE PANAMÁ
-- Sector: Gestión de residuos hospitalarios e industriales
-- Puntaje: 16/30 (En transición)
-- Alertas principales: Punto único de falla en planta, cuello de botella en gerente comercial, CxC accionistas
-- Aprendizaje clave: En empresas de servicios con operación de campo, el cuello de botella suele ser un gerente medio, no el dueño.
-
 ## DOCUMENTOS QUE PUEDES GENERAR
 Cuando el usuario llegue a la etapa de documentos, créalos COMPLETOS — no resúmenes ni esquemas.
 Comienza el título del documento con su código para que el sistema lo detecte:
