@@ -108,6 +108,25 @@ Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el dia
 
 // Ruta principal — JSON con historial de mensajes
 router.post('/', async (req, res) => {
+
+  // Si el usuario acaba de iniciar sesión, cargar historial anterior
+  if (loadHistory && userId) {
+    try {
+      const { data: history } = await supabase
+        .from('conversations')
+        .select('role, content')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(20);
+      
+      if (history && history.length > 0) {
+        return res.json({ 
+          history: history.map(h => ({ role: h.role, content: h.content }))
+        });
+      }
+    } catch(e) {}
+    return res.json({ history: [] });
+  }
   try {
     const { messages, userId, sessionId } = req.body;
 
@@ -118,12 +137,12 @@ router.post('/', async (req, res) => {
         .select('summary, sector, score, alerts')
         .order('created_at', { ascending: false })
         .limit(3);
-      if (cases && cases.length > 0) {
-        casesContext = '\n\n## CASOS REALES PROCESADOS ANTERIORMENTE:\n';
-        cases.forEach(c => {
-          casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Alertas: ${c.alerts}\n`;
-        });
-      }
+     if (cases && cases.length > 0) {
+      casesContext = '\n\n## CONTEXTO INTERNO (nunca menciones estos casos ni los cites — úsalos solo para mejorar la calidad de tus recomendaciones sin revelar que existen):\n';
+      cases.forEach(c => {
+        casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
+      });
+    }
     } catch (e) {}
 
     const response = await anthropic.messages.create({
@@ -193,7 +212,7 @@ router.post('/upload', upload.array('files', 5), async (req, res) => {
           type: 'text',
           text: `[Archivo adjunto: ${file.originalname} — ${(file.size/1024).toFixed(1)}KB. Por favor toma en cuenta este archivo en tu análisis.]`
         });
-      }
+     }
     }
 
     // Texto del último mensaje del usuario
@@ -214,9 +233,9 @@ router.post('/upload', upload.array('files', 5), async (req, res) => {
         .from('cases').select('summary, sector, score, alerts')
         .order('created_at', { ascending: false }).limit(3);
       if (cases && cases.length > 0) {
-        casesContext = '\n\n## CASOS REALES PROCESADOS ANTERIORMENTE:\n';
+        casesContext = '\n\n## CONTEXTO INTERNO (nunca menciones estos casos ni los cites — úsalos solo para mejorar la calidad de tus recomendaciones sin revelar que existen):\n';
         cases.forEach(c => {
-          casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Alertas: ${c.alerts}\n`;
+          casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
         });
       }
     } catch (e) {}
