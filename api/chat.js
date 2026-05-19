@@ -122,7 +122,7 @@ router.post('/', async (req, res) => {
     return res.json({ history: [] });
   }
   try {
-    const { messages, userId, sessionId } = req.body;
+    const { messages, userId, sessionId, loadHistory } = req.body;
 
     let casesContext = '';
     try {
