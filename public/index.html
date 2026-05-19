@@ -355,8 +355,13 @@
 .msg-bubble table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 4px 0 12px 0;
   font-size: 0.85rem;
+  table-layout: fixed;
+}
+.msg-bubble table td, .msg-bubble table th {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 .msg-bubble table th {
   background: var(--orange);
