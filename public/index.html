@@ -1277,7 +1277,32 @@ async function sendMessage() {
     await sendToAPI(conversationHistory);
   }
 }
-
+async function sendToAPI(messages) {
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+  showTyping();
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, userId: currentUser?.id, sessionId })
+    });
+    const data = await res.json();
+    hideTyping();
+    if (!res.ok) throw new Error(data.error);
+    const reply = data.message;
+    conversationHistory.push({ role: 'assistant', content: reply });
+    const isDoc = detectAndSaveDocument(reply);
+    addMessage('assistant', reply, true, null, isDoc);
+    saveSession();
+  } catch(e) {
+    hideTyping();
+    addMessage('assistant', 'Hubo un error al procesar tu mensaje. Por favor intenta de nuevo.', true);
+  } finally {
+    isLoading = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+}
 async function sendToAPIWithFiles(formData) {
   isLoading = true;
   document.getElementById('send-btn').disabled = true;
