@@ -98,7 +98,12 @@ Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el dia
 3. Inicia el diagnóstico dimensión por dimensión
 4. Al terminar presenta el puntaje con alertas prioritarias
 5. Propón la hoja de ruta
-6. Genera documentos por orden de urgencia`;
+6. Genera documentos por orden de urgencia
+
+## FORMATO DE TABLAS
+Cuando necesites mostrar una tabla, usa formato HTML simple con esta estructura:
+<table><tr><th>Columna1</th><th>Columna2</th></tr><tr><td>dato</td><td>dato</td></tr></table>
+NUNCA uses el formato markdown con pipes | col | col | para tablas.`;
 
 // Ruta principal — JSON con historial de mensajes
 router.post('/', async (req, res) => {
