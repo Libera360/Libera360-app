@@ -1243,13 +1243,11 @@ async function sendMessage() {
 
   input.value = ''; input.style.height = '48px';
 
-  // Mostrar archivos adjuntos en el chat
   let fileContext = '';
   if (pendingFiles.length > 0) {
     const filesHtml = pendingFiles.map(f =>
       `<div class="file-chip"><span class="file-chip-icon">${fileIcon(f.name)}</span>${f.name}</div>`
     ).join('');
-    // Agregar a biblioteca
     pendingFiles.forEach(f => {
       uploadedFiles.unshift({
         name: f.name,
@@ -1259,42 +1257,43 @@ async function sendMessage() {
       });
     });
     localStorage.setItem('libera360_files', JSON.stringify(uploadedFiles));
-
     fileContext = '\n\n[Archivos adjuntos: ' + pendingFiles.map(f => f.name).join(', ') + ']';
-    // Mostrar mensaje con archivos
     addMessage('user', (text || 'Archivos adjuntos:') + fileContext, true, filesHtml);
+
+    // Enviar con archivos via FormData
+    const formData = new FormData();
+    pendingFiles.forEach(f => formData.append('files', f));
+    conversationHistory.push({ role: 'user', content: text + fileContext });
+    formData.append('messages', JSON.stringify(conversationHistory));
+    formData.append('userId', currentUser?.id || '');
+    formData.append('sessionId', sessionId || '');
+
     pendingFiles = [];
     renderFilePreviews();
+    await sendToAPIWithFiles(formData);
   } else if (text) {
     addMessage('user', text, true);
+    conversationHistory.push({ role: 'user', content: text });
+    await sendToAPI(conversationHistory);
   }
-
-  const fullText = text + fileContext;
-  conversationHistory.push({ role: 'user', content: fullText });
-  await sendToAPI(conversationHistory);
 }
 
-async function sendToAPI(messages) {
+async function sendToAPIWithFiles(formData) {
   isLoading = true;
   document.getElementById('send-btn').disabled = true;
   showTyping();
   try {
-    const res = await fetch('/api/chat', {
+    const res = await fetch('/api/chat/upload', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, userId: currentUser?.id, sessionId })
+      body: formData
     });
     const data = await res.json();
     hideTyping();
     if (!res.ok) throw new Error(data.error);
     const reply = data.message;
     conversationHistory.push({ role: 'assistant', content: reply });
-
-    // ¿Generó un documento?
     const isDoc = detectAndSaveDocument(reply);
     addMessage('assistant', reply, true, null, isDoc);
-
-    // Guardar sesión automáticamente
     saveSession();
   } catch(e) {
     hideTyping();
