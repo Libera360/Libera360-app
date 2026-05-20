@@ -3,8 +3,6 @@ const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -12,7 +10,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 // Multer — almacenamiento temporal en memoria
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB por archivo
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = [
       'application/pdf',
@@ -79,7 +77,7 @@ Comienza el título del documento con su código para que el sistema lo detecte:
 - KPI-01: Dashboard de KPIs
 
 ## ARCHIVOS ADJUNTOS
-Cuando el usuario suba documentos (P&L, estados financieros, contratos, organigramas), analízalos en el contexto de la metodología Libera 360. Identifica patrones relevantes para el diagnóstico o las fases de implementación.
+Cuando el usuario suba documentos (P&L, estados financieros, contratos, organigramas), analízalos en el contexto de la metodología Libera 360.
 
 ## COMPORTAMIENTO
 - Haz UNA sola pregunta a la vez y espera la respuesta
@@ -90,63 +88,99 @@ Cuando el usuario suba documentos (P&L, estados financieros, contratos, organigr
 - Genera documentos completos listos para usar
 
 ## CONTINUIDAD DE SESIÓN
-Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el diagnóstico desde donde se quedó. No vuelvas a empezar desde cero si ya hay contexto previo en la conversación.
+Si hay historial previo en la conversación, retoma desde donde se quedó. NO vuelvas a presentarte ni repitas preguntas ya respondidas. Continúa naturalmente como si la conversación nunca se hubiera interrumpido.
 
-## AL INICIAR (sesión nueva sin historial)
+## AL INICIAR (solo cuando NO hay historial previo)
 1. Preséntate brevemente
 2. Pregunta: nombre del usuario, nombre de empresa y a qué se dedica
 3. Inicia el diagnóstico dimensión por dimensión
-4. Al terminar presenta el puntaje con alertas prioritarias
-5. Propón la hoja de ruta
-6. Genera documentos por orden de urgencia
 
 ## FORMATO DE TABLAS
-Cuando necesites mostrar una tabla, usa formato HTML simple con esta estructura:
+Cuando necesites mostrar una tabla, usa formato HTML simple:
 <table><tr><th>Columna1</th><th>Columna2</th></tr><tr><td>dato</td><td>dato</td></tr></table>
 NUNCA uses el formato markdown con pipes | col | col | para tablas.
-NUNCA uses separadores --- antes o después de una tabla.
-El título va inmediatamente antes de la tabla sin líneas en blanco ni separadores entre ellos.
-Ejemplo correcto:
-<b>ANÁLISIS DE MÁRGENES</b><table><tr><th>Servicio</th><th>Ingresos</th></tr><tr><td>dato</td><td>dato</td></tr></table>`;
+NUNCA uses separadores --- antes o después de una tabla.`;
 
-// Ruta principal — JSON con historial de mensajes
-router.post('/', async (req, res) => {
-  const { messages, userId, sessionId, loadHistory } = req.body;
-
-  // Si el usuario acaba de iniciar sesión, cargar historial anterior
-  console.log('loadHistory request - userId:', userId, 'loadHistory:', loadHistory);
-  if (loadHistory && userId) {
-    try {
-      const { data: history } = await supabase
-        .from('conversations')
-        .select('role, content')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(20);
-      
-      if (history && history.length > 0) {
-        return res.json({ 
-          history: history.map(h => ({ role: h.role, content: h.content }))
-        });
-      }
-    } catch(e) {}
-    return res.json({ history: [] });
-  }
+// ─── Función auxiliar: cargar historial completo desde Supabase ───────────────
+async function loadUserHistory(userId) {
   try {
-    let casesContext = '';
-    try {
-      const { data: cases } = await supabase
-        .from('cases')
-        .select('summary, sector, score, alerts')
-        .order('created_at', { ascending: false })
-        .limit(3);
-     if (cases && cases.length > 0) {
-      casesContext = '\n\n## CONTEXTO INTERNO (nunca menciones estos casos ni los cites — úsalos solo para mejorar la calidad de tus recomendaciones sin revelar que existen):\n';
-      cases.forEach(c => {
-        casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
-      });
+    const { data: history, error } = await supabase
+      .from('conversations')
+      .select('role, content, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(40); // últimos 40 mensajes (20 turnos)
+
+    if (error || !history || history.length === 0) return [];
+
+    return history.map(h => ({ role: h.role, content: h.content }));
+  } catch (e) {
+    return [];
+  }
+}
+
+// ─── Función auxiliar: guardar mensaje en Supabase ────────────────────────────
+async function saveMessage(userId, sessionId, role, content) {
+  try {
+    await supabase.from('conversations').insert({
+      user_id: userId,
+      session_id: sessionId,
+      role: role,
+      content: content,
+      created_at: new Date().toISOString()
+    });
+  } catch (e) {}
+}
+
+// ─── Función auxiliar: obtener contexto RAG de casos anteriores ───────────────
+async function getCasesContext() {
+  try {
+    const { data: cases } = await supabase
+      .from('cases')
+      .select('sector, score, alerts')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (!cases || cases.length === 0) return '';
+
+    let ctx = '\n\n## CONTEXTO INTERNO (úsalos solo para mejorar recomendaciones — nunca los menciones ni cites):\n';
+    cases.forEach(c => {
+      ctx += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
+    });
+    return ctx;
+  } catch (e) {
+    return '';
+  }
+}
+
+// ─── RUTA PRINCIPAL: cargar historial ─────────────────────────────────────────
+// GET /api/chat/history?userId=xxx
+router.get('/history', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.json({ history: [] });
+
+  const history = await loadUserHistory(userId);
+  res.json({ history });
+});
+
+// ─── RUTA PRINCIPAL: enviar mensaje ───────────────────────────────────────────
+router.post('/', async (req, res) => {
+  const { messages, userId, sessionId } = req.body;
+
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages requerido' });
+  }
+
+  try {
+    // Guardar el mensaje del USUARIO en Supabase
+    if (userId && messages.length > 0) {
+      const lastUserMsg = messages[messages.length - 1];
+      if (lastUserMsg.role === 'user' && typeof lastUserMsg.content === 'string') {
+        await saveMessage(userId, sessionId, 'user', lastUserMsg.content);
+      }
     }
-    } catch (e) {}
+
+    const casesContext = await getCasesContext();
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
@@ -157,17 +191,9 @@ router.post('/', async (req, res) => {
 
     const assistantMessage = response.content[0].text;
 
-    // Guardar en Supabase
-    if (sessionId) {
-      try {
-        await supabase.from('conversations').insert({
-          session_id: sessionId,
-          user_id: userId,
-          role: 'assistant',
-          content: assistantMessage,
-          created_at: new Date().toISOString()
-        });
-      } catch(e) {}
+    // Guardar respuesta del ASISTENTE en Supabase
+    if (userId) {
+      await saveMessage(userId, sessionId, 'assistant', assistantMessage);
     }
 
     res.json({ message: assistantMessage });
@@ -178,70 +204,51 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Ruta con archivos adjuntos
+// ─── RUTA CON ARCHIVOS ADJUNTOS ───────────────────────────────────────────────
 router.post('/upload', upload.array('files', 5), async (req, res) => {
   try {
-    const { messages, userId, sessionId, loadHistory } = req.body;
+    const { messages, userId, sessionId } = req.body;
     const parsedMessages = JSON.parse(messages);
     const files = req.files || [];
 
-    // Construir contenido multimodal con los archivos
     const contentBlocks = [];
 
-    // Agregar archivos como contenido
     for (const file of files) {
       if (file.mimetype === 'application/pdf') {
         contentBlocks.push({
           type: 'document',
-          source: {
-            type: 'base64',
-            media_type: 'application/pdf',
-            data: file.buffer.toString('base64')
-          }
+          source: { type: 'base64', media_type: 'application/pdf', data: file.buffer.toString('base64') }
         });
       } else if (file.mimetype.startsWith('image/')) {
         contentBlocks.push({
           type: 'image',
-          source: {
-            type: 'base64',
-            media_type: file.mimetype,
-            data: file.buffer.toString('base64')
-          }
+          source: { type: 'base64', media_type: file.mimetype, data: file.buffer.toString('base64') }
         });
-      }
-      // Para Office (.docx, .xlsx, etc.) — tratamos como texto del nombre por ahora
-      else {
+      } else {
         contentBlocks.push({
           type: 'text',
-          text: `[Archivo adjunto: ${file.originalname} — ${(file.size/1024).toFixed(1)}KB. Por favor toma en cuenta este archivo en tu análisis.]`
+          text: `[Archivo adjunto: ${file.originalname} — ${(file.size/1024).toFixed(1)}KB]`
         });
-     }
+      }
     }
 
-    // Texto del último mensaje del usuario
     const lastUserMsg = parsedMessages[parsedMessages.length - 1];
     if (lastUserMsg && lastUserMsg.content) {
       contentBlocks.push({ type: 'text', text: lastUserMsg.content });
     }
 
-    // Reemplazar último mensaje con contenido multimodal
+    // Guardar mensaje del usuario con texto
+    if (userId && lastUserMsg) {
+      const userText = lastUserMsg.content || '[Archivo adjunto]';
+      await saveMessage(userId, sessionId, 'user', userText);
+    }
+
     const enrichedMessages = [...parsedMessages.slice(0, -1), {
       role: 'user',
       content: contentBlocks
     }];
 
-    let casesContext = '';
-    try {
-      const { data: cases } = await supabase
-        .from('cases').select('summary, sector, score, alerts')
-        .order('created_at', { ascending: false }).limit(3);
-      if (cases && cases.length > 0) {
-        casesContext = '\n\n## CONTEXTO INTERNO (nunca menciones estos casos ni los cites — úsalos solo para mejorar la calidad de tus recomendaciones sin revelar que existen):\n';
-        cases.forEach(c => {
-          casesContext += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
-        });
-      }
-    } catch (e) {}
+    const casesContext = await getCasesContext();
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
@@ -252,16 +259,8 @@ router.post('/upload', upload.array('files', 5), async (req, res) => {
 
     const assistantMessage = response.content[0].text;
 
-    if (sessionId) {
-      try {
-        await supabase.from('conversations').insert({
-          session_id: sessionId,
-          user_id: userId,
-          role: 'assistant',
-          content: assistantMessage,
-          created_at: new Date().toISOString()
-        });
-      } catch(e) {}
+    if (userId) {
+      await saveMessage(userId, sessionId, 'assistant', assistantMessage);
     }
 
     res.json({ message: assistantMessage });
