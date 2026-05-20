@@ -114,6 +114,7 @@ router.post('/', async (req, res) => {
   const { messages, userId, sessionId, loadHistory } = req.body;
 
   // Si el usuario acaba de iniciar sesión, cargar historial anterior
+  console.log('loadHistory request - userId:', userId, 'loadHistory:', loadHistory);
   if (loadHistory && userId) {
     try {
       const { data: history } = await supabase
