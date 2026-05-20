@@ -103,7 +103,11 @@ Si el usuario dice "quiero continuar" o "seguimos donde quedamos", retoma el dia
 ## FORMATO DE TABLAS
 Cuando necesites mostrar una tabla, usa formato HTML simple con esta estructura:
 <table><tr><th>Columna1</th><th>Columna2</th></tr><tr><td>dato</td><td>dato</td></tr></table>
-NUNCA uses el formato markdown con pipes | col | col | para tablas.`;
+NUNCA uses el formato markdown con pipes | col | col | para tablas.
+NUNCA uses separadores --- antes o después de una tabla.
+El título va inmediatamente antes de la tabla sin líneas en blanco ni separadores entre ellos.
+Ejemplo correcto:
+<b>ANÁLISIS DE MÁRGENES</b><table><tr><th>Servicio</th><th>Ingresos</th></tr><tr><td>dato</td><td>dato</td></tr></table>`;
 
 // Ruta principal — JSON con historial de mensajes
 router.post('/', async (req, res) => {
