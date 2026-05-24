@@ -12,6 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/chat', require('./api/chat'));
 app.use('/api/cases', require('./api/cases'));
 app.use('/api/auth', require('./api/auth'));
+app.use('/api/conversations', require('./api/conversations'));
 
 // Ruta principal - sirve el frontend
 app.get('/dueno-atrapado', (req, res) => {
