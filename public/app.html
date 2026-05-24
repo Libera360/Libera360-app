@@ -170,7 +170,7 @@
     .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
     .msg { display: flex; gap: 12px; max-width: 780px; }
-    .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+    .msg.user { flex-direction: row-reverse; align-self: flex-end; align-items: flex-start; }
     .msg.assistant { align-self: flex-start; }
 
     .msg-avatar {
@@ -651,7 +651,10 @@ async function sendMessage() {
 }
 
 function checkForDocument(text) {
-  const keywords = ['SOP', 'organigrama', 'matriz', 'dashboard', 'diagnóstico completo'];
+  const keywords = [
+    'SOP-', 'Organigrama Funcional', 'Matriz de Autorización',
+    'Matriz de Rentabilidad', 'Dashboard de KPIs', 'Agenda del Dueño'
+  ];
   if (keywords.some(k => text.toLowerCase().includes(k.toLowerCase()))) {
     const container = document.getElementById('chat-messages');
     const lastMsg = container.lastElementChild;
