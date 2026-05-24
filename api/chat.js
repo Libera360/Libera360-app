@@ -1,791 +1,207 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Asesor IA · Libera360</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --orange: #F39644;
-      --orange-dim: rgba(243,150,68,0.12);
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --surface2: #1c1c1c;
-      --border: #242424;
-      --text: #e0e0e0;
-      --muted: #666;
-      --white: #ffffff;
-      --danger: #e05555;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+const express = require('express');
+const router = express.Router();
+const Anthropic = require('@anthropic-ai/sdk');
+const { createClient } = require('@supabase/supabase-js');
+const multer = require('multer');
 
-    /* ── SCREENS ── */
-    .screen { display: none; width: 100%; height: 100vh; }
-    .screen.active { display: flex; }
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-    /* ══════════════════════════════════════════
-       SCREEN LOGIN
-    ══════════════════════════════════════════ */
-    #screen-login {
-      align-items: center; justify-content: center;
-      background: var(--bg);
-      position: relative; overflow: hidden;
-    }
-    .login-bg {
-      position: absolute; inset: 0;
-      background-image:
-        linear-gradient(rgba(243,150,68,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(243,150,68,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-    }
-    .login-bg-glow {
-      position: absolute; inset: 0;
-      background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(243,150,68,0.06) 0%, transparent 70%);
-    }
-    .login-box {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 420px;
-      padding: 0 24px;
-      text-align: center;
-    }
-    .login-logo { margin-bottom: 48px; }
-    .login-logo img { height: 44px; width: auto; }
-
-    .login-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 36px; letter-spacing: 1px;
-      color: var(--white); margin-bottom: 8px;
-    }
-    .login-sub {
-      font-size: 14px; color: var(--muted);
-      margin-bottom: 40px; line-height: 1.6;
-    }
-
-    .login-form { display: flex; flex-direction: column; gap: 14px; }
-
-    .login-input {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 20px;
-      font-size: 15px; font-family: 'DM Sans', sans-serif;
-      color: var(--text); width: 100%;
-      transition: border-color 0.2s;
-      outline: none;
-    }
-    .login-input:focus { border-color: rgba(243,150,68,0.5); }
-    .login-input::placeholder { color: var(--muted); }
-
-    .login-btn {
-      background: var(--orange); color: #000;
-      border: none; border-radius: 8px;
-      padding: 16px; font-size: 15px; font-weight: 700;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer; transition: all 0.2s;
-      margin-top: 4px;
-    }
-    .login-btn:hover { background: var(--white); transform: translateY(-1px); }
-    .login-btn:disabled { background: var(--surface2); color: var(--muted); cursor: not-allowed; transform: none; }
-
-    .login-error {
-      font-size: 13px; color: var(--danger);
-      background: rgba(224,85,85,0.1);
-      border: 1px solid rgba(224,85,85,0.2);
-      border-radius: 6px; padding: 12px 16px;
-      display: none;
-    }
-    .login-error.visible { display: block; }
-
-    .login-footer {
-      margin-top: 32px; font-size: 12px; color: var(--muted); line-height: 1.6;
-    }
-    .login-footer a { color: var(--orange); text-decoration: none; }
-    .login-footer a:hover { text-decoration: underline; }
-
-    /* ══════════════════════════════════════════
-       SCREEN APP (CHAT)
-    ══════════════════════════════════════════ */
-    #screen-app {
-      flex-direction: column;
-      height: 100vh; overflow: hidden;
-    }
-
-    /* Navbar */
-    .app-nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; height: 56px; flex-shrink: 0;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-    }
-    .app-nav-logo img { height: 32px; width: auto; }
-    .app-nav-right { display: flex; align-items: center; gap: 16px; }
-    .user-badge {
-      font-size: 12px; color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      padding: 4px 12px; border-radius: 20px;
-    }
-    .btn-salir {
-      font-size: 13px; color: var(--muted);
-      background: none; border: 1px solid var(--border);
-      padding: 6px 14px; border-radius: 6px;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: all 0.2s;
-    }
-    .btn-salir:hover { color: var(--danger); border-color: var(--danger); }
-
-    /* Tabs */
-    .app-tabs {
-      display: flex; align-items: center; gap: 2px;
-      padding: 0 24px; height: 44px; flex-shrink: 0;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-    }
-    .app-tab {
-      font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
-      color: var(--muted); background: none; border: none;
-      padding: 8px 16px; border-radius: 6px; cursor: pointer;
-      transition: all 0.2s;
-    }
-    .app-tab:hover { color: var(--text); background: var(--surface); }
-    .app-tab.active { color: var(--orange); background: var(--orange-dim); }
-
-    /* App body */
-    .app-body { flex: 1; overflow: hidden; }
-    .app-panel { display: none; height: 100%; }
-    .app-panel.active { display: flex; flex-direction: column; }
-
-    /* Chat */
-    .chat-messages {
-      flex: 1; overflow-y: auto; padding: 24px;
-      display: flex; flex-direction: column; gap: 16px;
-      align-items: center;
-    }
-    .chat-messages::-webkit-scrollbar { width: 4px; }
-    .chat-messages::-webkit-scrollbar-track { background: transparent; }
-    .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .msg { display: flex; gap: 12px; max-width: 780px; width: 100%; }
-    .msg.user { flex-direction: row-reverse; align-self: flex-end; align-items: flex-start; }
-    .msg.assistant { align-self: flex-start; }
-
-    .msg-avatar {
-      width: 32px; height: 32px; flex-shrink: 0;
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700;
-    }
-    .msg.user .msg-avatar { background: var(--orange); color: #000; }
-    .msg.assistant .msg-avatar { background: var(--surface2); border: 1px solid var(--border); color: var(--orange); font-size: 12px; }
-
-    .msg-bubble {
-      padding: 14px 18px;
-      border-radius: 12px;
-      font-size: 15px; line-height: 1.7;
-      max-width: calc(100% - 44px);
-    }
-    .msg.user .msg-bubble {
-      background: var(--orange); color: #000;
-      border-radius: 12px 4px 12px 12px;
-      font-weight: 500;
-    }
-    .msg.assistant .msg-bubble {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px 12px 12px 12px;
-      color: var(--text);
-    }
-    .msg.assistant .msg-bubble p { margin-bottom: 10px; }
-    .msg.assistant .msg-bubble p:last-child { margin-bottom: 0; }
-    .msg.assistant .msg-bubble strong { color: var(--white); font-weight: 600; }
-    .msg.assistant .msg-bubble ul, .msg.assistant .msg-bubble ol { padding-left: 20px; margin: 8px 0; }
-    .msg.assistant .msg-bubble li { margin-bottom: 4px; }
-    .msg.assistant .msg-bubble table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
-    .msg.assistant .msg-bubble th { background: var(--surface2); color: var(--orange); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
-    .msg.assistant .msg-bubble td { padding: 8px 12px; border: 1px solid var(--border); }
-    .msg.assistant .msg-bubble tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
-
-    .msg-typing {
-      display: flex; align-items: center; gap: 4px;
-      padding: 14px 18px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 4px 12px 12px 12px;
-    }
-    .typing-dot {
-      width: 6px; height: 6px; background: var(--muted);
-      border-radius: 50%;
-      animation: typing 1.2s infinite;
-    }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing { 0%,60%,100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } }
-
-    /* Separador de sesión */
-    .session-sep {
-      text-align: center; font-size: 12px; color: var(--muted);
-      padding: 8px 0; border-top: 1px solid var(--border);
-      margin: 4px 0; width: 100%; max-width: 780px;
-    }
-
-    /* Input area */
-    .chat-input-area {
-      flex-shrink: 0;
-      padding: 16px 24px 20px;
-      background: var(--bg);
-      border-top: 1px solid var(--border);
-    }
-    .chat-input-inner {
-      max-width: 780px; margin: 0 auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 4px 4px 4px 16px;
-      display: flex; align-items: flex-end; gap: 8px;
-      transition: border-color 0.2s;
-    }
-    .chat-input-inner:focus-within { border-color: rgba(243,150,68,0.4); }
-
-    .chat-input-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; }
-
-    .btn-attach {
-      background: none; border: none; cursor: pointer;
-      font-size: 16px; padding: 8px 4px; color: var(--muted);
-      transition: color 0.2s; flex-shrink: 0;
-    }
-    .btn-attach:hover { color: var(--orange); }
-
-    #user-input {
-      flex: 1; background: none; border: none; outline: none;
-      font-size: 15px; font-family: 'DM Sans', sans-serif;
-      color: var(--text); resize: none; padding: 10px 0;
-      line-height: 1.5; max-height: 120px; overflow-y: auto;
-    }
-    #user-input::placeholder { color: var(--muted); }
-
-    .btn-send {
-      width: 36px; height: 36px; flex-shrink: 0;
-      background: var(--surface2); border: none; border-radius: 8px;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      transition: all 0.2s; margin-bottom: 4px;
-    }
-    .btn-send svg { width: 16px; height: 16px; fill: var(--muted); }
-    .btn-send.ready { background: var(--orange); }
-    .btn-send.ready svg { fill: #000; }
-    .btn-send.ready:hover { background: var(--white); }
-
-    #file-input { display: none; }
-    .file-preview-strip {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      padding: 8px 0 4px; width: 100%;
-    }
-    .file-chip {
-      display: flex; align-items: center; gap: 6px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 4px 10px;
-      font-size: 12px; color: var(--text);
-    }
-    .file-chip-remove {
-      background: none; border: none; cursor: pointer;
-      color: var(--muted); font-size: 14px; padding: 0; line-height: 1;
-    }
-    .file-chip-remove:hover { color: var(--danger); }
-
-    /* Biblioteca y Docs */
-    .panel-inner { padding: 32px 24px; max-width: 780px; margin: 0 auto; overflow-y: auto; height: 100%; }
-    .panel-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 28px; letter-spacing: 0.5px;
-      color: var(--white); margin-bottom: 24px;
-    }
-    .panel-empty {
-      text-align: center; padding: 64px 24px;
-      color: var(--muted); font-size: 15px; line-height: 1.7;
-    }
-    .panel-empty-icon { font-size: 40px; margin-bottom: 16px; }
-
-    /* Download button in chat */
-    .btn-download {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--orange-dim); color: var(--orange);
-      border: 1px solid rgba(243,150,68,0.3);
-      border-radius: 6px; padding: 8px 16px;
-      font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif;
-      cursor: pointer; margin-top: 12px;
-      transition: all 0.2s; text-decoration: none;
-    }
-    .btn-download:hover { background: var(--orange); color: #000; }
-
-    /* Responsive */
-    @media (max-width: 600px) {
-      .app-nav { padding: 0 16px; }
-      .app-tabs { padding: 0 12px; }
-      .chat-messages { padding: 16px; }
-      .chat-input-area { padding: 12px 16px 16px; }
-      .panel-inner { padding: 20px 16px; }
-    }
-  </style>
-</head>
-<body>
-
-<!-- ══════════════════════════════════════════
-     LOGIN
-══════════════════════════════════════════ -->
-<div id="screen-login" class="screen active">
-  <div class="login-bg"></div>
-  <div class="login-bg-glow"></div>
-  <div class="login-box">
-    <div class="login-logo">
-      <img src="/LOGO_LIBERA.png" alt="Libera360">
-    </div>
-    <h1 class="login-title">Asesor IA</h1>
-    <p class="login-sub">Ingresa tu correo y el código de acceso<br>que recibiste con el Manual Libera360.</p>
-
-    <div class="login-form">
-      <input type="email" class="login-input" id="login-email" placeholder="Tu correo electrónico" autocomplete="email">
-      <input type="text" class="login-input" id="login-code" placeholder="Código de acceso (ej: LIBERA2026)" autocomplete="off" style="text-transform:uppercase;">
-      <div class="login-error" id="login-error"></div>
-      <button class="login-btn" id="login-btn" onclick="doLogin()">Ingresar al Asesor →</button>
-    </div>
-
-    <div class="login-footer">
-      ¿No tienes código? <a href="https://hotmart.com/TULINK" target="_blank">Consigue el Manual Libera360</a><br>
-      <a href="/">← Volver al inicio</a>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     APP
-══════════════════════════════════════════ -->
-<div id="screen-app" class="screen">
-
-  <!-- Nav -->
-  <nav class="app-nav">
-    <div class="app-nav-logo">
-      <img src="/LOGO_LIBERA.png" alt="Libera360">
-    </div>
-    <div class="app-nav-right">
-      <span class="user-badge" id="user-badge">usuario</span>
-      <button class="btn-salir" onclick="logout()">Salir</button>
-    </div>
-  </nav>
-
-  <!-- Tabs -->
-  <div class="app-tabs">
-    <button class="app-tab active" id="tab-chat" onclick="showPanel('chat')">💬 Asesor IA</button>
-    <button class="app-tab" id="tab-biblioteca" onclick="showPanel('biblioteca')">📁 Mis Archivos</button>
-    <button class="app-tab" id="tab-documentos" onclick="showPanel('documentos')">📄 Documentos</button>
-  </div>
-
-  <!-- Body -->
-  <div class="app-body">
-
-    <!-- CHAT -->
-    <div id="panel-chat" class="app-panel active">
-      <div class="chat-messages" id="chat-messages"></div>
-      <div class="chat-input-area">
-        <div class="chat-input-inner">
-          <div style="flex:1;">
-            <div class="file-preview-strip" id="file-preview-strip"></div>
-            <div class="chat-input-row">
-              <button class="btn-attach" onclick="document.getElementById('file-input').click()" title="Adjuntar archivo">📎</button>
-              <input type="file" id="file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" multiple onchange="handleFileSelect(this)">
-              <textarea id="user-input" placeholder="Escribe tu respuesta aquí..." rows="1"
-                onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-              <button class="btn-send" id="send-btn" onclick="sendMessage()">
-                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BIBLIOTECA -->
-    <div id="panel-biblioteca" class="app-panel">
-      <div class="panel-inner">
-        <div class="panel-title">Mis Archivos</div>
-        <div id="bib-content">
-          <div class="panel-empty">
-            <div class="panel-empty-icon">📁</div>
-            <div>Aún no has subido ningún archivo.<br>Usa el botón 📎 en el chat para adjuntar PDFs, documentos o imágenes.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- DOCUMENTOS -->
-    <div id="panel-documentos" class="app-panel">
-      <div class="panel-inner">
-        <div class="panel-title">Documentos Generados</div>
-        <div id="docs-content">
-          <div class="panel-empty">
-            <div class="panel-empty-icon">📄</div>
-            <div>Aún no hay documentos generados.<br>El Asesor creará SOPs, organigramas, matrices y más durante el proceso.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-/* ══════════════════════════════
-   ESTADO
-══════════════════════════════ */
-let userId = null;
-let sessionId = null;
-let messages = []; // Solo mensajes de la sesión actual — NO incluye historial
-let pendingFiles = [];
-
-/* ══════════════════════════════
-   LOGIN
-══════════════════════════════ */
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const code = document.getElementById('login-code').value.trim().toUpperCase();
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-
-  if (!email || !code) {
-    showError('Ingresa tu correo y código de acceso.');
-    return;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'image/jpeg', 'image/png', 'image/webp'
+    ];
+    cb(null, allowed.includes(file.mimetype));
   }
-
-  btn.disabled = true;
-  btn.textContent = 'Verificando...';
-  err.classList.remove('visible');
-
-  try {
-    const res = await fetch('/api/auth/access', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code })
-    });
-    const data = await res.json();
-
-    if (!res.ok) {
-      showError(data.error || 'Código inválido. Verifica e intenta de nuevo.');
-      btn.disabled = false;
-      btn.textContent = 'Ingresar al Asesor →';
-      return;
-    }
-
-    userId = data.user.id;
-    sessionId = 'sess_' + Date.now();
-    // Solo guardamos userId y email — el historial siempre viene de Supabase
-    localStorage.setItem('libera360_user', JSON.stringify({ userId, email }));
-
-    document.getElementById('user-badge').textContent = email.split('@')[0];
-    showScreen('screen-app');
-    initChat(data.history || []);
-
-  } catch (e) {
-    showError('Error de conexión. Verifica tu internet e intenta de nuevo.');
-    btn.disabled = false;
-    btn.textContent = 'Ingresar al Asesor →';
-  }
-}
-
-function showError(msg) {
-  const err = document.getElementById('login-error');
-  err.textContent = msg;
-  err.classList.add('visible');
-}
-
-function logout() {
-  localStorage.removeItem('libera360_user');
-  userId = null; sessionId = null; messages = [];
-  document.getElementById('chat-messages').innerHTML = '';
-  showScreen('screen-login');
-}
-
-/* ══════════════════════════════
-   CARGA DE HISTORIAL DESDE SUPABASE
-══════════════════════════════ */
-async function loadHistoryAndInit(uid) {
-  try {
-    const res = await fetch(`/api/conversations?userId=${uid}`);
-    const data = await res.json();
-    initChat(data.history || []);
-  } catch(e) {
-    initChat([]);
-  }
-}
-
-/* ══════════════════════════════
-   SESIÓN PERSISTENTE (cross-device)
-══════════════════════════════ */
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('libera360_user');
-  if (saved) {
-    try {
-      const u = JSON.parse(saved);
-      userId = u.userId;
-      sessionId = 'sess_' + Date.now();
-      document.getElementById('user-badge').textContent = u.email.split('@')[0];
-      showScreen('screen-app');
-      loadHistoryAndInit(u.userId); // Siempre carga desde Supabase
-    } catch(e) {
-      localStorage.removeItem('libera360_user');
-    }
-  }
-
-  document.getElementById('login-code').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
 });
 
-/* ══════════════════════════════
-   NAVEGACIÓN
-══════════════════════════════ */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
+const SYSTEM_PROMPT = `Eres el Asesor IA Libera 360, un asistente especializado en ayudar a duenos de empresas a organizar, estructurar y escalar sus negocios aplicando la metodologia Libera 360.
 
-function showPanel(name) {
-  document.querySelectorAll('.app-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.app-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
-}
+## MISION
+Guiar al usuario a traves del Diagnostico 360 en 6 dimensiones y generar documentos concretos listos para usar.
 
-/* ══════════════════════════════
-   CHAT — INIT
-══════════════════════════════ */
-function initChat(history = []) {
-  const container = document.getElementById('chat-messages');
-  container.innerHTML = '';
-  messages = []; // Siempre empieza vacío — el historial se carga pero no se mete al array
+## METODOLOGIA LIBERA 360 - 6 FASES
+- L: LOCALIZAR - Diagnostico 360 en 6 dimensiones.
+- I: IDENTIFICAR - Matriz de rentabilidad por servicio.
+- B: BALANCEAR - Organigrama funcional + limites de autorizacion.
+- E: ESTANDARIZAR - SOPs por area + plantillas operativas.
+- R: REVISAR - Dashboard de KPIs + calendario de revisiones.
+- A: ACOMPANAR - Agenda estrategica + plan de crecimiento.
 
-  if (history && history.length > 0) {
-    // Renderizar historial visualmente SIN agregarlo al array messages[]
-    history.forEach(msg => {
-      appendMessageSilent(msg.role, msg.content);
-    });
-    // Separador visual
-    const sep = document.createElement('div');
-    sep.className = 'session-sep';
-    sep.textContent = '— continuando sesión anterior —';
-    container.appendChild(sep);
-    container.scrollTop = container.scrollHeight;
-  } else {
-    // Sin historial → saludo inicial
-    appendMessage('assistant', `Hola, soy el **Asesor IA Libera360**. Estoy aquí para guiarte a través del proceso de liberación empresarial aplicando la metodología LIBERA.\n\nVamos paso a paso, con documentos listos para usar al final.\n\nPara empezar, cuéntame: ¿cuál es tu nombre, cómo se llama tu empresa y a qué se dedica?`);
-  }
-}
+## LAS 6 DIMENSIONES DEL DIAGNOSTICO (escala 1-5, maximo 30 puntos)
+CLIENTES: Conocimiento del cliente ideal, concentracion de ingresos, satisfaccion, mora.
+OPERACION: Documentacion de procesos, puntos unicos de falla, cuellos de botella.
+FINANZAS: Separacion finanzas personales/empresariales, margenes por servicio, flujo de caja.
+EQUIPO: Claridad de roles, descripciones de puesto aplicadas, redundancia de funciones.
+DUENO: Horas en operativo vs estrategico, capacidad de desconexion.
+VISION: Claridad de metas, alineacion entre socios, inversiones que respaldan la vision.
 
-/* ══════════════════════════════
-   CHAT — MENSAJES
-══════════════════════════════ */
+## ESCALA DE MADUREZ
+6-10: CRITICO | 11-15: FRAGIL | 16-20: EN TRANSICION | 21-25: ESTRUCTURADO | 26-30: LIBERADO
 
-// Renderiza Y agrega al array messages[] (para mensajes nuevos de esta sesión)
-function appendMessage(role, content) {
-  const container = document.getElementById('chat-messages');
-  const msg = document.createElement('div');
-  msg.className = 'msg ' + role;
+## DOCUMENTOS QUE PUEDES GENERAR
+Crealos COMPLETOS. Comienza el titulo con el codigo:
+MAT-AF-01, SOP-OP-01, SOP-AF-01, SOP-COM-01, ORG-01, KPI-01
 
-  const avatar = document.createElement('div');
-  avatar.className = 'msg-avatar';
-  avatar.textContent = role === 'user' ? 'Tú' : 'L360';
+## COMPORTAMIENTO
+- Haz UNA sola pregunta a la vez y espera la respuesta
+- Se directo, honesto y empatico
+- Adapta el lenguaje al sector del usuario
+- Al terminar diagnostico: presenta puntaje con alertas prioritarias
+- Propone hoja de ruta en 6 etapas
+- Genera documentos completos listos para usar
 
-  const bubble = document.createElement('div');
-  bubble.className = 'msg-bubble';
-  bubble.innerHTML = formatMessage(content);
+## CONTINUIDAD DE SESION
+Si hay historial previo, retoma desde donde se quedo. NO vuelvas a presentarte ni repitas preguntas ya respondidas.
 
-  msg.appendChild(avatar);
-  msg.appendChild(bubble);
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
+## AL INICIAR (solo cuando NO hay historial previo)
+1. Presentate brevemente
+2. Pregunta: nombre, empresa y a que se dedica
+3. Inicia el diagnostico dimension por dimension
 
-  messages.push({ role, content }); // Agrega al array
-}
+## FORMATO DE TABLAS
+Usa HTML: <table><tr><th>Col</th></tr><tr><td>dato</td></tr></table>
+NUNCA uses pipes markdown para tablas.`;
 
-// Solo renderiza visualmente — NO agrega al array messages[] (para historial)
-function appendMessageSilent(role, content) {
-  const container = document.getElementById('chat-messages');
-  const msg = document.createElement('div');
-  msg.className = 'msg ' + role;
-
-  const avatar = document.createElement('div');
-  avatar.className = 'msg-avatar';
-  avatar.textContent = role === 'user' ? 'Tú' : 'L360';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'msg-bubble';
-  bubble.innerHTML = formatMessage(content);
-
-  msg.appendChild(avatar);
-  msg.appendChild(bubble);
-  container.appendChild(msg);
-  // NO hace messages.push() — el historial lo maneja Supabase
-}
-
-function formatMessage(text) {
-  // Si ya viene con HTML (tablas), no procesarlo como markdown
-  if (text.includes('<table') || text.includes('<tr')) {
-    return '<p>' + text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
-  }
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    .replace(/^/, '<p>').replace(/$/, '</p>');
-}
-
-function showTyping() {
-  const container = document.getElementById('chat-messages');
-  const div = document.createElement('div');
-  div.className = 'msg assistant';
-  div.id = 'typing-indicator';
-  div.innerHTML = `
-    <div class="msg-avatar">L360</div>
-    <div class="msg-typing">
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-      <div class="typing-dot"></div>
-    </div>`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-function hideTyping() {
-  const t = document.getElementById('typing-indicator');
-  if (t) t.remove();
-}
-
-/* ══════════════════════════════
-   ENVIAR MENSAJE
-══════════════════════════════ */
-async function sendMessage() {
-  const input = document.getElementById('user-input');
-  const text = input.value.trim();
-  if (!text && pendingFiles.length === 0) return;
-
-  const sendBtn = document.getElementById('send-btn');
-  sendBtn.classList.remove('ready');
-  input.value = '';
-  input.style.height = 'auto';
-
-  if (text) appendMessage('user', text);
-
-  document.getElementById('file-preview-strip').innerHTML = '';
-  const filesToSend = [...pendingFiles];
-  pendingFiles = [];
-
-  showTyping();
-
+async function loadUserHistory(userId) {
   try {
-    let response;
-
-    if (filesToSend.length > 0) {
-      const formData = new FormData();
-      formData.append('message', text || 'Analiza este archivo.');
-      formData.append('userId', userId || '');
-      formData.append('sessionId', sessionId || '');
-      formData.append('history', JSON.stringify(messages.slice(-10)));
-      filesToSend.forEach(f => formData.append('files', f));
-      response = await fetch('/api/chat/upload', { method: 'POST', body: formData });
-    } else {
-      response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: messages.slice(-20),
-          userId,
-          sessionId
-        })
-      });
-    }
-
-    const data = await response.json();
-    hideTyping();
-
-    if (data.message) {
-      appendMessage('assistant', data.message);
-      checkForDocument(data.message);
-    } else {
-      appendMessage('assistant', 'Hubo un error al procesar tu mensaje. Intenta de nuevo.');
-    }
-
+    const { data: history, error } = await supabase
+      .from('conversations')
+      .select('role, content, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .limit(40);
+    if (error || !history || history.length === 0) return [];
+    return history.map(h => ({ role: h.role, content: h.content }));
   } catch (e) {
-    hideTyping();
-    appendMessage('assistant', 'Error de conexión. Verifica tu internet e intenta de nuevo.');
+    return [];
   }
 }
 
-/* ══════════════════════════════
-   DOCUMENTOS
-══════════════════════════════ */
-function checkForDocument(text) {
-  const keywords = [
-    'SOP-', 'Organigrama Funcional', 'Matriz de Autorización',
-    'Matriz de Rentabilidad', 'Dashboard de KPIs', 'Agenda del Dueño'
-  ];
-  if (keywords.some(k => text.includes(k))) {
-    const container = document.getElementById('chat-messages');
-    const lastMsg = container.lastElementChild;
-    if (lastMsg && lastMsg.querySelector('.msg-bubble')) {
-      const btn = document.createElement('button');
-      btn.className = 'btn-download';
-      btn.innerHTML = '⬇ Descargar documento';
-      btn.onclick = () => downloadDoc(text);
-      lastMsg.querySelector('.msg-bubble').appendChild(btn);
+async function saveMessage(userId, sessionId, role, content) {
+  try {
+    await supabase.from('conversations').insert({
+      user_id: userId,
+      session_id: sessionId,
+      role: role,
+      content: content,
+      created_at: new Date().toISOString()
+    });
+  } catch (e) {}
+}
+
+async function getCasesContext() {
+  try {
+    const { data: cases } = await supabase
+      .from('cases')
+      .select('sector, score, alerts')
+      .order('created_at', { ascending: false })
+      .limit(3);
+    if (!cases || cases.length === 0) return '';
+    let ctx = '\n\n## CONTEXTO INTERNO (nunca los menciones):\n';
+    cases.forEach(c => {
+      ctx += `- Sector: ${c.sector} | Puntaje: ${c.score}/30 | Patrones: ${c.alerts}\n`;
+    });
+    return ctx;
+  } catch (e) {
+    return '';
+  }
+}
+
+router.get('/history', async (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.json({ history: [] });
+  const history = await loadUserHistory(userId);
+  res.json({ history });
+});
+
+router.post('/', async (req, res) => {
+  const { messages, userId, sessionId } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages requerido' });
+  }
+  try {
+    if (userId && messages.length > 0) {
+      const lastUserMsg = messages[messages.length - 1];
+      if (lastUserMsg.role === 'user' && typeof lastUserMsg.content === 'string') {
+        await saveMessage(userId, sessionId, 'user', lastUserMsg.content);
+      }
     }
+    const casesContext = await getCasesContext();
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT + casesContext,
+      messages: messages
+    });
+    const assistantMessage = response.content[0].text;
+    if (userId) await saveMessage(userId, sessionId, 'assistant', assistantMessage);
+    res.json({ message: assistantMessage });
+  } catch (error) {
+    console.error('Error en chat:', error);
+    res.status(500).json({ error: 'Error al procesar tu mensaje.' });
   }
-}
+});
 
-function downloadDoc(content) {
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'documento-libera360.txt';
-  a.click(); URL.revokeObjectURL(url);
-}
-
-/* ══════════════════════════════
-   INPUT
-══════════════════════════════ */
-function handleKeyDown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+router.post('/upload', upload.array('files', 5), async (req, res) => {
+  try {
+    const { messages, userId, sessionId } = req.body;
+    const parsedMessages = JSON.parse(messages);
+    const files = req.files || [];
+    const contentBlocks = [];
+    for (const file of files) {
+      if (file.mimetype === 'application/pdf') {
+        contentBlocks.push({
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: file.buffer.toString('base64') }
+        });
+      } else if (file.mimetype.startsWith('image/')) {
+        contentBlocks.push({
+          type: 'image',
+          source: { type: 'base64', media_type: file.mimetype, data: file.buffer.toString('base64') }
+        });
+      } else {
+        contentBlocks.push({
+          type: 'text',
+          text: `[Archivo adjunto: ${file.originalname}]`
+        });
+      }
+    }
+    const lastUserMsg = parsedMessages[parsedMessages.length - 1];
+    if (lastUserMsg && lastUserMsg.content) {
+      contentBlocks.push({ type: 'text', text: lastUserMsg.content });
+    }
+    if (userId && lastUserMsg) {
+      await saveMessage(userId, sessionId, 'user', lastUserMsg.content || '[Archivo adjunto]');
+    }
+    const enrichedMessages = [...parsedMessages.slice(0, -1), {
+      role: 'user',
+      content: contentBlocks
+    }];
+    const casesContext = await getCasesContext();
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 2048,
+      system: SYSTEM_PROMPT + casesContext,
+      messages: enrichedMessages
+    });
+    const assistantMessage = response.content[0].text;
+    if (userId) await saveMessage(userId, sessionId, 'assistant', assistantMessage);
+    res.json({ message: assistantMessage });
+  } catch (error) {
+    console.error('Error en chat/upload:', error);
+    res.status(500).json({ error: 'Error al procesar los archivos.' });
   }
-}
+});
 
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  const btn = document.getElementById('send-btn');
-  btn.classList.toggle('ready', el.value.trim().length > 0 || pendingFiles.length > 0);
-}
-
-function handleFileSelect(input) {
-  const files = Array.from(input.files);
-  files.forEach(f => {
-    pendingFiles.push(f);
-    const strip = document.getElementById('file-preview-strip');
-    const chip = document.createElement('div');
-    chip.className = 'file-chip';
-    chip.innerHTML = `📎 ${f.name} <button class="file-chip-remove" onclick="removeFile('${f.name}', this)">×</button>`;
-    strip.appendChild(chip);
-  });
-  document.getElementById('send-btn').classList.add('ready');
-  input.value = '';
-}
-
-function removeFile(name, btn) {
-  pendingFiles = pendingFiles.filter(f => f.name !== name);
-  btn.parentElement.remove();
-  if (pendingFiles.length === 0 && !document.getElementById('user-input').value.trim()) {
-    document.getElementById('send-btn').classList.remove('ready');
-  }
-}
-</script>
-</body>
-</html>
+module.exports = router;

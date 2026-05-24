@@ -30,18 +30,10 @@ router.post('/access', async (req, res) => {
       user = newUser;
     }
 
-    const { data: history } = await supabase
-  .from('conversations')
-  .select('role, content, created_at')
-  .eq('user_id', user.id)
-  .order('created_at', { ascending: true })
-  .limit(100);
-
-res.json({ 
-  success: true, 
-  user: { id: user.id, email: user.email },
-  history: history || []
-});
+    res.json({ 
+      success: true, 
+      user: { id: user.id, email: user.email }
+    });
 
   } catch (error) {
     console.error('Error en auth:', error);
