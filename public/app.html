@@ -492,7 +492,7 @@ function initChat(history = []) {
     sep.className = 'session-sep';
     sep.textContent = '— continuando sesión anterior —';
     container.appendChild(sep);
-    container.scrollTop = container.scrollHeight;
+    msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else {
     appendMessage('assistant', 'Hola, soy el **Asesor IA Libera360**. Estoy aquí para guiarte a través del proceso de liberación empresarial aplicando la metodología LIBERA.\n\nVamos paso a paso, con documentos listos para usar al final.\n\nPara empezar, cuéntame: ¿cuál es tu nombre, cómo se llama tu empresa y a qué se dedica?');
   }
@@ -506,7 +506,7 @@ function appendMessage(role, content) {
   const bubble = document.createElement('div'); bubble.className = 'msg-bubble';
   bubble.innerHTML = formatMessage(content);
   msg.appendChild(avatar); msg.appendChild(bubble);
-  container.appendChild(msg); container.scrollTop = container.scrollHeight;
+  container.appendChild(msg); msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
   messages.push({ role, content });
 }
 
@@ -536,7 +536,7 @@ function showTyping() {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div'); div.className = 'msg assistant'; div.id = 'typing-indicator';
   div.innerHTML = '<div class="msg-avatar">L360</div><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  container.appendChild(div); container.scrollTop = container.scrollHeight;
+  container.appendChild(div); msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function hideTyping() { const t = document.getElementById('typing-indicator'); if (t) t.remove(); }
