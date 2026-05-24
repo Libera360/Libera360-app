@@ -780,10 +780,12 @@
    NAVEGACIÓN
 ══════════════════════════════ */
 // Detectar si viene del dueño atrapado
-window.addEventListener('load', () => {
+window.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   if (params.get('start') === '1') {
-    showScreen('screen-diagnostico');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-diagnostico').classList.add('active');
+    window.scrollTo(0, 0);
   }
 });
 
