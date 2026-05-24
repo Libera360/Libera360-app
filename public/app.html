@@ -162,14 +162,15 @@
 
     /* Chat */
     .chat-messages {
-      flex: 1; overflow-y: auto; padding: 24px;
-      display: flex; flex-direction: column; gap: 16px;
-    }
+  flex: 1; overflow-y: auto; padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  align-items: center;
+}
     .chat-messages::-webkit-scrollbar { width: 4px; }
     .chat-messages::-webkit-scrollbar-track { background: transparent; }
     .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-    .msg { display: flex; gap: 12px; max-width: 780px; }
+    .msg { display: flex; gap: 12px; max-width: 780px; width: 100%; }
     .msg.user { flex-direction: row-reverse; align-self: flex-end; align-items: flex-start; }
     .msg.assistant { align-self: flex-start; }
 
@@ -471,7 +472,7 @@ async function doLogin() {
 
     document.getElementById('user-badge').textContent = email.split('@')[0];
     showScreen('screen-app');
-    initChat();
+initChat(data.history || []);
 
   } catch (e) {
     showError('Error de conexión. Verifica tu internet e intenta de nuevo.');
