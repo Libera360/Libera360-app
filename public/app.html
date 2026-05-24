@@ -465,7 +465,7 @@ async function doLogin() {
       return;
     }
 
-    userId = data.userId || data.user?.id || email;
+    userId = data.user.id;
     sessionId = 'sess_' + Date.now();
     localStorage.setItem('libera360_user', JSON.stringify({ userId, email }));
 
@@ -493,6 +493,16 @@ function logout() {
   showScreen('screen-login');
 }
 
+async function loadHistoryAndInit(uid) {
+  try {
+    const res = await fetch(`/api/conversations?userId=${uid}`);
+    const data = await res.json();
+    initChat(data.history || []);
+  } catch(e) {
+    initChat([]);
+  }
+}
+
 /* ══════════════════════════════
    SESIÓN PERSISTENTE
 ══════════════════════════════ */
@@ -505,12 +515,12 @@ window.addEventListener('DOMContentLoaded', () => {
       sessionId = 'sess_' + Date.now();
       document.getElementById('user-badge').textContent = u.email.split('@')[0];
       showScreen('screen-app');
-      initChat();
+      loadHistoryAndInit(u.userId); // ← siempre desde Supabase
     } catch(e) {
       localStorage.removeItem('libera360_user');
     }
   }
-
+ 
   // Enter en código activa login
   document.getElementById('login-code').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
@@ -535,9 +545,23 @@ function showPanel(name) {
 /* ══════════════════════════════
    CHAT
 ══════════════════════════════ */
-function initChat() {
-  const welcome = `Hola, soy el **Asesor IA Libera360**. Estoy aquí para guiarte a través del proceso de liberación empresarial aplicando la metodología LIBERA.\n\nVamos paso a paso, con documentos listos para usar al final.\n\nPara empezar, cuéntame: ¿cuál es tu nombre, cómo se llama tu empresa y a qué se dedica?`;
-  appendMessage('assistant', welcome);
+function initChat(history = []) {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = '';
+  messages = [];
+
+  if (history && history.length > 0) {
+    history.forEach(msg => {
+      appendMessage(msg.role, msg.content);
+    });
+    const sep = document.createElement('div');
+    sep.style.cssText = 'text-align:center; font-size:12px; color:var(--muted); padding:8px 0; border-top:1px solid var(--border); margin:8px 0;';
+    sep.textContent = '— continuando sesión anterior —';
+    container.appendChild(sep);
+    container.scrollTop = container.scrollHeight;
+  } else {
+    appendMessage('assistant', `Hola, soy el **Asesor IA Libera360**. Estoy aquí para guiarte a través del proceso de liberación empresarial.\n\nPara empezar, cuéntame: ¿cuál es tu nombre, cómo se llama tu empresa y a qué se dedica?`);
+  }
 }
 
 function appendMessage(role, content) {
