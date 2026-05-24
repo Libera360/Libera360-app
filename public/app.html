@@ -536,7 +536,7 @@ function showTyping() {
   const container = document.getElementById('chat-messages');
   const div = document.createElement('div'); div.className = 'msg assistant'; div.id = 'typing-indicator';
   div.innerHTML = '<div class="msg-avatar">L360</div><div class="msg-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
-  container.appendChild(div); msg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  container.appendChild(div); div.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function hideTyping() { const t = document.getElementById('typing-indicator'); if (t) t.remove(); }
