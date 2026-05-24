@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Dueño Atrapado · Libera360</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --orange: #F39644;
+      --orange-dim: rgba(243,150,68,0.12);
+      --orange-glow: rgba(243,150,68,0.25);
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1c1c1c;
+      --border: #242424;
+      --text: #e0e0e0;
+      --muted: #666;
+      --white: #ffffff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── NAV ── */
+    .lectura-nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px;
+      background: rgba(10,10,10,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; text-decoration: none; }
+
+    .progress-bar-wrap {
+      flex: 1; max-width: 300px; margin: 0 24px;
+      height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--orange); border-radius: 2px;
+      width: 0%; transition: width 0.3s ease;
+    }
+
+    .btn-back {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted);
+      background: none; border: none; cursor: pointer;
+      transition: color 0.2s; text-decoration: none;
+    }
+    .btn-back:hover { color: var(--text); }
+
+    /* ── BODY ── */
+    .lectura-body {
+      max-width: 680px; margin: 0 auto;
+      padding: 64px 24px 120px;
+    }
+
+    .lectura-badge {
+      display: inline-block;
+      font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--orange); border: 1px solid rgba(243,150,68,0.3);
+      padding: 6px 14px; border-radius: 4px; margin-bottom: 32px;
+    }
+
+    .lectura-titulo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 8vw, 80px);
+      line-height: 0.95; color: var(--white); margin-bottom: 16px;
+    }
+    .lectura-subtitulo {
+      font-size: 16px; font-style: italic; color: var(--muted);
+      margin-bottom: 40px; padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .lectura-intro {
+      background: var(--orange-dim);
+      border-left: 3px solid var(--orange);
+      padding: 24px 28px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 48px;
+      font-size: 16px; line-height: 1.7; color: var(--text);
+      font-style: italic;
+    }
+
+    .lectura-p {
+      font-size: 16px; line-height: 1.85; color: #bbb; margin-bottom: 20px;
+    }
+    .lectura-p em { font-style: italic; color: var(--text); }
+
+    .verdad-block { margin-bottom: 60px; padding-top: 8px; }
+    .verdad-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 88px; line-height: 1;
+      color: rgba(243,150,68,0.1);
+      margin-bottom: -22px;
+    }
+    .verdad-titulo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px; letter-spacing: 0.5px;
+      color: var(--white); margin-bottom: 6px;
+    }
+    .verdad-subtitulo {
+      font-size: 14px; font-style: italic; color: var(--orange);
+      margin-bottom: 22px;
+    }
+    .verdad-texto {
+      font-size: 16px; line-height: 1.85; color: #bbb; margin-bottom: 20px;
+    }
+    .verdad-quote {
+      background: var(--surface);
+      border-left: 3px solid var(--orange);
+      padding: 20px 24px;
+      border-radius: 0 8px 8px 0;
+      font-size: 15px; font-style: italic;
+      color: var(--text); line-height: 1.7;
+    }
+
+    .lectura-cierre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px; margin-top: 56px; margin-bottom: 48px;
+    }
+    .lectura-cierre h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px; color: var(--white); margin-bottom: 16px;
+    }
+    .lectura-cierre p { font-size: 16px; line-height: 1.7; color: #aaa; margin-bottom: 8px; }
+
+    /* ── CTA DIAGNÓSTICO ── */
+    .diag-unlock-section {
+      text-align: center; padding: 52px 32px;
+      background: linear-gradient(180deg, var(--bg) 0%, var(--surface) 100%);
+      border: 1px solid var(--border); border-radius: 16px;
+      position: relative; overflow: hidden;
+    }
+    .diag-unlock-section::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 100%, var(--orange-glow), transparent);
+      pointer-events: none;
+    }
+
+    .unlock-lock {
+      font-size: 40px; margin-bottom: 16px;
+      display: block; transition: all 0.5s;
+    }
+    .unlock-lock.open { transform: scale(1.2) rotate(-10deg); filter: drop-shadow(0 0 14px var(--orange)); }
+
+    .unlock-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 14px; display: block; transition: color 0.5s;
+    }
+    .unlock-label.ready { color: var(--orange); }
+
+    .unlock-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px; color: var(--white); margin-bottom: 12px; letter-spacing: 0.5px;
+    }
+    .unlock-desc {
+      font-size: 15px; color: var(--muted);
+      max-width: 420px; margin: 0 auto 28px; line-height: 1.6;
+    }
+
+    .btn-diag {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      padding: 18px 40px; border-radius: 6px;
+      cursor: not-allowed; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--muted);
+      transition: all 0.5s; text-decoration: none;
+    }
+    .btn-diag.unlocked {
+      background: var(--orange); color: #000;
+      border-color: var(--orange); cursor: pointer;
+      box-shadow: 0 0 32px rgba(243,150,68,0.4);
+    }
+    .btn-diag.unlocked:hover {
+      background: #fff; transform: translateY(-2px);
+      box-shadow: 0 16px 48px rgba(243,150,68,0.35);
+    }
+
+    .unlock-hint {
+      font-size: 12px; color: var(--muted); margin-top: 16px;
+      display: block; transition: opacity 0.5s;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .lectura-nav { padding: 14px 20px; }
+      .progress-bar-wrap { max-width: 120px; }
+      .lectura-body { padding: 40px 20px 100px; }
+      .lectura-cierre { padding: 28px 20px; }
+      .diag-unlock-section { padding: 36px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="lectura-nav" id="top">
+  <a href="/" class="nav-logo">
+    <img src="/LOGO_LIBERA.png" alt="Libera360" style="height:36px; width:auto;">
+  </a>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-fill"></div>
+  </div>
+  <a href="/" class="btn-back">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+    Inicio
+  </a>
+</nav>
+
+<div class="lectura-body">
+
+  <div class="lectura-badge">Guía gratuita · Metodología Libera360</div>
+
+  <h1 class="lectura-titulo">El dueño<br>atrapado.</h1>
+  <p class="lectura-subtitulo">5 verdades que nadie nos dice de los negocios.</p>
+
+  <div class="lectura-intro">
+    "Si tu negocio no puede funcionar sin ti, no tienes una empresa — tienes un empleo muy caro y muy agotador."
+  </div>
+
+  <p class="lectura-p">Esta guía no es motivacional. No tiene frases para colgar en la pared ni consejos genéricos sobre "creer en ti mismo". No te va a pedir que visualices el éxito ni que repitas afirmaciones cada mañana.</p>
+  <p class="lectura-p"><em>Es un espejo. Y los espejos a veces incomodan.</em></p>
+  <p class="lectura-p">Si eres consultor, profesional independiente o dueño de un negocio de servicios, probablemente llevas meses — o años — sintiendo que algo no cuadra. El negocio avanza, pero tú no descansas. Tomas vacaciones, pero con el teléfono encendido. Tienes equipo, pero igual terminas haciendo todo.</p>
+  <p class="lectura-p" style="margin-bottom:48px;">No es mala suerte. No es falta de talento. Es que nadie nos dijo la verdad sobre cómo funciona realmente un negocio cuando no tiene estructura.</p>
+
+  <!-- Verdad 01 -->
+  <div class="verdad-block">
+    <div class="verdad-num">01</div>
+    <h2 class="verdad-titulo">Tu negocio no es tuyo. Eres su empleado.</h2>
+    <p class="verdad-subtitulo">Suena fuerte. Pero piénsalo un segundo.</p>
+    <p class="verdad-texto">Un negocio real es aquel que genera valor independientemente de si el dueño está físicamente ahí. Si el tuyo necesita de ti para cada decisión, cada proceso y cada entrega, entonces no construiste un negocio — construiste un trabajo. Y ese trabajo no tiene vacaciones, no tiene límites de horario y no se puede vender fácilmente.</p>
+    <p class="verdad-texto">¿Cuándo fue la última vez que te fuiste de viaje sin revisar el correo? ¿Cuándo tomaste una decisión importante sin que dependiera de tu presencia? ¿Cuántas veces has dicho "es que yo soy el único que sabe cómo hacer esto"?</p>
+    <div class="verdad-quote">La libertad no llega cuando el negocio crece. Llega cuando el negocio funciona sin ti.</div>
+  </div>
+
+  <!-- Verdad 02 -->
+  <div class="verdad-block">
+    <div class="verdad-num">02</div>
+    <h2 class="verdad-titulo">El caos no es falta de tiempo. Es falta de sistema.</h2>
+    <p class="verdad-subtitulo">El problema no eres tú. Es la ausencia de estructura.</p>
+    <p class="verdad-texto">El verdadero problema no es la cantidad de trabajo. Es que cada tarea vive en tu cabeza, cada proceso depende de tu presencia y cada decisión requiere tu aprobación. Cuando eso pasa, no importa cuántas horas trabajes — siempre habrá más fuegos que apagar.</p>
+    <p class="verdad-texto">He hablado con cientos de dueños de negocio. Todos dicen lo mismo: "Es que hay mucho que hacer", "No tengo tiempo para organizarme". Y todos tienen razón en el síntoma — pero están confundiendo la causa.</p>
+    <div class="verdad-quote">Un negocio sin procesos documentados es un negocio que opera a memoria. Y la memoria falla.</div>
+  </div>
+
+  <!-- Verdad 03 -->
+  <div class="verdad-block">
+    <div class="verdad-num">03</div>
+    <h2 class="verdad-titulo">No todo lo que haces vale lo mismo.</h2>
+    <p class="verdad-subtitulo">Estás mezclando tareas de $10 con decisiones de $10,000.</p>
+    <p class="verdad-texto">Una de las trampas más comunes del dueño de negocio es tratar todas las actividades como igualmente importantes. Responder un correo, atender una queja, revisar una factura, cerrar una venta estratégica, diseñar el futuro de la empresa — todo entra en la misma lista, todo compite por el mismo tiempo.</p>
+    <p class="verdad-texto">Pero no es lo mismo. Algunas actividades tienen un impacto multiplicador en tu negocio. Otras simplemente mantienen las cosas funcionando. Y muchas, siendo honesto, podrían hacerlas otras personas o automatizarse por completo.</p>
+    <div class="verdad-quote">Tu tiempo como dueño vale según dónde lo inviertes. No según cuánto lo usas.</div>
+  </div>
+
+  <!-- Verdad 04 -->
+  <div class="verdad-block">
+    <div class="verdad-num">04</div>
+    <h2 class="verdad-titulo">Delegar sin sistema es solo transferir el caos.</h2>
+    <p class="verdad-subtitulo">Contratar a alguien no soluciona nada si no tienes claro qué necesitas que haga.</p>
+    <p class="verdad-texto">Muchos dueños llegan a un punto de quiebre y deciden contratar. Traen a alguien nuevo, le explican las cosas de palabra, confían en que aprenderá sobre la marcha — y dos meses después están más agotados que antes porque ahora tienen que supervisar a alguien que no entiende bien qué se espera de él.</p>
+    <p class="verdad-texto">Eso no es delegación. Es transferencia de confusión. La delegación real funciona cuando hay procesos documentados, roles claros, indicadores definidos y un sistema de seguimiento. Cuando cualquier persona puede leer cómo se hace algo y ejecutarlo sin tener que preguntarte a ti.</p>
+    <div class="verdad-quote">Delegar bien no es soltar y rezar. Es diseñar el sistema y confiar en él.</div>
+  </div>
+
+  <!-- Verdad 05 -->
+  <div class="verdad-block">
+    <div class="verdad-num">05</div>
+    <h2 class="verdad-titulo">La libertad no es el premio al final. Es la estructura desde el inicio.</h2>
+    <p class="verdad-subtitulo">La mayoría espera "llegar a un punto" donde todo se acomode solo. Ese punto no existe.</p>
+    <p class="verdad-texto">Los dueños que tienen negocios que funcionan sin ellos no llegaron ahí esperando. Construyeron la estructura primero. Diseñaron los sistemas, definieron los roles, documentaron los procesos — y luego pudieron soltar el control con confianza. La libertad no es una recompensa. Es una decisión de diseño.</p>
+    <p class="verdad-texto">Existe una creencia muy extendida: "Cuando el negocio crezca, voy a poder descansar." Pero sin estructura, el crecimiento solo trae más caos. Más clientes sin procesos es más problemas. Más ingresos sin control financiero es más confusión.</p>
+    <div class="verdad-quote">La libertad no es la consecuencia del éxito. Es la condición que lo hace posible.</div>
+  </div>
+
+  <!-- Cierre -->
+  <div class="lectura-cierre">
+    <h3>El primer paso ya lo diste.</h3>
+    <p>Si llegaste hasta aquí, algo en estas páginas te resonó. Quizás reconociste tu negocio en alguna de las 5 verdades. Quizás nombraste por primera vez algo que venías sintiendo hace tiempo.</p>
+    <p style="margin-top:12px; color:#bbb;"><em>Eso es el primer paso. Y es el más difícil.</em></p>
+    <p style="margin-top:12px;">El siguiente es saber exactamente dónde estás. No por intuición — con un diagnóstico real.</p>
+  </div>
+
+  <!-- CTA DIAGNÓSTICO -->
+  <div class="diag-unlock-section">
+    <span class="unlock-lock" id="unlock-lock">🔒</span>
+    <span class="unlock-label" id="unlock-label">Completa la lectura para desbloquear</span>
+    <h2 class="unlock-title">Diagnóstico Gratuito</h2>
+    <p class="unlock-desc">¿Qué tan libre estás de tu negocio? 10 preguntas. 3 minutos. Un resultado honesto.</p>
+    <a href="/diagnostico" id="btn-diag" class="btn-diag" onclick="return checkUnlocked(event)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Hacer el diagnóstico
+    </a>
+    <span class="unlock-hint" id="unlock-hint">Continúa leyendo para desbloquear →</span>
+  </div>
+
+</div><!-- lectura-body -->
+
+<script>
+  // ── Scroll al inicio al cargar ──
+  window.addEventListener('load', () => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  });
+
+  // ── Barra de progreso + desbloqueo ──
+  let unlocked = false;
+
+  function updateProgress() {
+    const docH = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = docH > 0 ? Math.min(100, Math.round((window.scrollY / docH) * 100)) : 0;
+    document.getElementById('progress-fill').style.width = pct + '%';
+
+    if (pct >= 75 && !unlocked) {
+      unlocked = true;
+      unlockDiag();
+    }
+  }
+
+  window.addEventListener('scroll', updateProgress, { passive: true });
+
+  function unlockDiag() {
+    const lock = document.getElementById('unlock-lock');
+    const label = document.getElementById('unlock-label');
+    const btn = document.getElementById('btn-diag');
+    const hint = document.getElementById('unlock-hint');
+
+    lock.textContent = '🔓';
+    lock.classList.add('open');
+    label.textContent = '¡Listo! El diagnóstico está disponible';
+    label.classList.add('ready');
+    btn.classList.add('unlocked');
+    hint.style.opacity = '0';
+  }
+
+  function checkUnlocked(e) {
+    if (!unlocked) {
+      e.preventDefault();
+      // Scroll suave al final para que terminen de leer
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      return false;
+    }
+    return true;
+  }
+</script>
+</body>
+</html>

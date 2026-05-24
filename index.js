@@ -14,6 +14,14 @@ app.use('/api/cases', require('./api/cases'));
 app.use('/api/auth', require('./api/auth'));
 
 // Ruta principal - sirve el frontend
+app.get('/dueno-atrapado', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dueno-atrapado.html'));
+});
+
+app.get('/diagnostico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
