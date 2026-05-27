@@ -244,7 +244,7 @@ router.post('/', async (req, res) => {
     const casesContext = await getCasesContext();
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
+      max_tokens: 1024,
       system: SYSTEM_PROMPT + casesContext,
       messages: messages
     });
@@ -295,7 +295,7 @@ router.post('/upload', upload.array('files', 5), async (req, res) => {
     const casesContext = await getCasesContext();
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 2048,
+      max_tokens: 1024,
       system: SYSTEM_PROMPT + casesContext,
       messages: enrichedMessages
     });
