@@ -182,6 +182,27 @@
     .msg.assistant .msg-bubble th { background: var(--surface2); color: var(--orange); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
     .msg.assistant .msg-bubble td { padding: 8px 12px; border: 1px solid var(--border); }
     .msg.assistant .msg-bubble tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.option-btn {
+  background: transparent;
+  border: 1px solid var(--orange);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  transition: background 0.2s;
+}
+.option-btn:hover {
+  background: rgba(232, 112, 42, 0.15);
+}
 
     .msg-typing {
       display: flex; align-items: center; gap: 4px; padding: 14px 18px;
@@ -522,14 +543,46 @@ function appendMessageSilent(role, content) {
 }
 
 function formatMessage(text) {
-  if (text.includes('<table') || text.includes('<tr')) {
-    return '<p>' + text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+  // Detectar bloque de opciones y convertir en botones
+  if (text.includes('[OPCIONES]') && text.includes('[/OPCIONES]')) {
+    const parts = text.split('[OPCIONES]');
+    const before = parts[0];
+    const rest = parts[1].split('[/OPCIONES]');
+    const optionsText = rest[0];
+    const after = rest[1] || '';
+
+    const beforeHtml = formatText(before);
+    const afterHtml = formatText(after);
+
+    const optionLines = optionsText.trim().split('\n').filter(l => l.trim());
+    const buttonsHtml = optionLines.map(line => {
+      const match = line.match(/^(\d)\s*[—\-]\s*(.+)$/);
+      if (match) {
+        const num = match[1];
+        const label = match[2].trim();
+        return `<button class="option-btn" onclick="selectOption('${num}')">${num} — ${label}</button>`;
+      }
+      return '';
+    }).filter(Boolean).join('');
+
+    return beforeHtml + `<div class="options-container">${buttonsHtml}</div>` + afterHtml;
   }
+  return formatText(text);
+}
+
+function formatText(text) {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')
     .replace(/^/, '<p>').replace(/$/, '</p>');
+}
+
+function selectOption(num) {
+  const input = document.getElementById('user-input');
+  input.value = num;
+  document.getElementById('send-btn').classList.add('ready');
+  sendMessage();
 }
 
 function showTyping() {
